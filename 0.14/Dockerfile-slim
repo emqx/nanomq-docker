@@ -1,0 +1,24 @@
+FROM debian:11-slim
+
+ENV VSN=0.14.8
+
+RUN set -eu; \
+    apt update -y -y --no-install-recommends;\
+    DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends libmbedtls-dev libatomic1 curl; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN set -eu; \
+    curl --silent --show-error -kfL -o nanomq.deb.sha256 "https://github.com/emqx/nanomq/releases/download/${VSN}/nanomq-${VSN}-linux-$(dpkg --print-architecture).deb.sha256"; \
+    curl --silent --show-error -kfL -o nanomq.deb "https://github.com/emqx/nanomq/releases/download/${VSN}/nanomq-${VSN}-linux-$(dpkg --print-architecture).deb"; \
+     echo "$(cat nanomq.deb.sha256) nanomq.deb" | sha256sum -c || exit 1; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./nanomq.deb; \
+    ldconfig; \
+    rm -rf nanomq.deb nanomq.deb.sha256
+
+EXPOSE 1883 8883 8081
+
+COPY docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
+
+CMD ["--conf", "/etc/nanomq.conf"]
